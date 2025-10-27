@@ -7,7 +7,6 @@ import json
 # ======================
 # 1️⃣ OpenAI API Key
 # ======================
-openai.api_key = "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"  # replace with your key
 
 # ======================
 # 2️⃣ Helper: Clean GPT JSON
@@ -117,3 +116,4 @@ if st.button("Generate Project XML"):
                     file_name=f"{project_json['project_name'].replace(' ', '_')}.xml",
                     mime="application/xml"
                 )
+
