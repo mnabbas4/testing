@@ -1,16 +1,15 @@
-import os
-
-
 import streamlit as st
-import openai
+from openai import OpenAI
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import json
+import os
 
 # ======================
-# 1️⃣ OpenAI API Key
+# 1️⃣ OpenAI API Setup
 # ======================
-openai.api_key = "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"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 # ======================
 # 2️⃣ Helper: Clean GPT JSON
 # ======================
@@ -42,20 +41,26 @@ def parse_project_description(user_input):
     }}
     Only return JSON, nothing else.
     """
-    response = openai.ChatCompletion.create(
-        model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0
-    )
-
-    text = response["choices"][0]["message"]["content"]
-    text = clean_gpt_json(text)
 
     try:
-        return json.loads(text)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0
+        )
+
+        text = response.choices[0].message.content
+        text = clean_gpt_json(text)
+
+        try:
+            return json.loads(text)
+        except Exception as e:
+            st.error(f"❌ JSON parsing failed: {e}")
+            st.text_area("Raw GPT Output", text, height=300)
+            return None
+
     except Exception as e:
-        st.error(f"❌ JSON parsing failed: {e}")
-        st.text_area("Raw GPT Output", text, height=300)
+        st.error(f"⚠️ OpenAI API Error: {e}")
         return None
 
 # ======================
@@ -84,7 +89,7 @@ def generate_ms_project_xml(project_json):
             ET.SubElement(sub_task, "ID").text = str(uid_counter)
             ET.SubElement(sub_task, "Name").text = task_name
             ET.SubElement(sub_task, "Duration").text = "PT8H0M0S"  # default 1 day
-            ET.SubElement(sub_task, "PredecessorLink").text = str(uid_counter-1)
+            ET.SubElement(sub_task, "PredecessorLink").text = str(uid_counter - 1)
             uid_counter += 1
 
     resources_elem = ET.SubElement(project, "Resources")
@@ -101,7 +106,10 @@ def generate_ms_project_xml(project_json):
 st.title("🧠 AI Project Planner for MS Project")
 st.write("Enter your project description in plain English and get a ready-to-use Microsoft Project XML file.")
 
-user_input = st.text_area("Describe your project", "Plan a 3-month e-commerce website project with phases: Planning, Design, Development, Testing. Resources: 5 developers, 1 designer, 1 QA.")
+user_input = st.text_area(
+    "Describe your project",
+    "Plan a 3-month e-commerce website project with phases: Planning, Design, Development, Testing. Resources: 5 developers, 1 designer, 1 QA."
+)
 
 if st.button("Generate Project XML"):
     if not user_input.strip():
@@ -119,7 +127,3 @@ if st.button("Generate Project XML"):
                     file_name=f"{project_json['project_name'].replace(' ', '_')}.xml",
                     mime="application/xml"
                 )
-
-
-
-
