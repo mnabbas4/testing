@@ -9,7 +9,7 @@ import os
 # 1️⃣ OpenAI API Setup
 # ======================
 openai.api_key = "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"
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+#client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # ======================
 # 2️⃣ Helper: Clean GPT JSON
@@ -128,4 +128,5 @@ if st.button("Generate Project XML"):
                     file_name=f"{project_json['project_name'].replace(' ', '_')}.xml",
                     mime="application/xml"
                 )
+
 
