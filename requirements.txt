@@ -1,0 +1,7 @@
+streamlit
+openai
+streamlit
+openai
+pandas
+numpy
+lxml
