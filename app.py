@@ -1,4 +1,6 @@
 import os
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 import streamlit as st
 import openai
 import xml.etree.ElementTree as ET
@@ -117,5 +119,6 @@ if st.button("Generate Project XML"):
                     file_name=f"{project_json['project_name'].replace(' ', '_')}.xml",
                     mime="application/xml"
                 )
+
 
 
