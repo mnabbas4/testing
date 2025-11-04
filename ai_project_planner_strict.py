@@ -473,7 +473,7 @@ if st.button("Generate MS Project XML (Enhanced)"):
 
 # Put your public backend URL (ngrok or cloud VM) here.
 # Example: "https://abcd1234.ngrok.io"
-    BACKEND_URL = st.secrets.get("BACKEND_URL", "") or "https://REPLACE_WITH_YOUR_NGROK_OR_IP:8000"
+    BACKEND_URL = st.secrets.get("https://e0b045081384.ngrok-free.app", "") or "https://e0b045081384.ngrok-free.app"
 
 
     with st.spinner("Sending project JSON to your Aspose backend..."):
@@ -508,3 +508,4 @@ if st.button("Generate MS Project XML (Enhanced)"):
     st.success("✅ MS Project XML generated successfully!")
     with open(created, "rb") as f:
         st.download_button("⬇️ Download XML", f, file_name=filename, mime="application/xml")
+
