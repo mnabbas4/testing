@@ -22,7 +22,8 @@ import clr, sys, traceback
 # ---------------------------
 # Configuration - update this to match your Aspose DLL folder
 # ---------------------------
-ASPOSE_DLL_DIR = r"C:\Users\Syedm\AppData\Local\Programs\Microsoft VS Code\Aspose.Tasks\NET45"
+ASPOSE_DLL_DIR = r"path\to\Aspose.Tasks\NET45"
+
 # Make sure Aspose.Tasks.dll exists in ASPOSE_DLL_DIR
 if not Path(ASPOSE_DLL_DIR).exists():
     raise RuntimeError(f"Aspose directory not found: {ASPOSE_DLL_DIR}")
