@@ -1,7 +1,20 @@
-streamlit
-openai
-streamlit
-openai
-pandas
-numpy
-lxml
+# --- Core App Dependencies ---
+streamlit==1.40.1
+openai==1.54.3
+pydantic==2.9.2
+pythonnet==3.0.3
+
+# --- Optional but recommended utilities ---
+lxml==5.3.0
+pandas==2.2.3
+numpy==2.1.2
+requests==2.32.3
+
+# --- Windows-only (Aspose interop) ---
+# Aspose.Tasks is a .NET DLL, not installable via pip. 
+# Ensure Aspose.Tasks.dll (and related files) are placed under:
+# /Aspose.Tasks/NET45/ inside your repo, or adjust ASPOSE_DLL_DIR in script.
+
+# --- Streamlit Deployment Support ---
+pyyaml==6.0.2
+altair==5.4.1
