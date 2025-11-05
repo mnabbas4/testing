@@ -12,7 +12,7 @@ st.title("🌐 Remote AI Project Planner (Frontend)")
 st.caption("Uses remote Aspose backend over ngrok to generate MS Project XML")
 
 # 👉 Update this URL with your ngrok public URL
-BACKEND_URL = "https://e0b045081384.ngrok-free.app"
+BACKEND_URL = " https://3be52689857c.ngrok-free.app"
 
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY", "")
 if not OPENAI_API_KEY:
