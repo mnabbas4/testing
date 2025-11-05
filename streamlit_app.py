@@ -109,15 +109,11 @@ def extract_project(raw_text: str):
 
 
 user_input = st.text_area("Describe your project:", height=300)
-def validate_plan(project: ProjectModel):
-    issues = []
-    for phase in project.phases:
-        if phase.duration_days == 0:
-            issues.append(f"Phase '{phase.name}' has zero duration.")
-        for t in phase.tasks:
-            if t.duration_days == 0 and not t.dependencies:
-                issues.append(f"Task '{t.name}' may be missing predecessors or milestone tag.")
-    return issues
+issues = validate_plan(project)
+if issues:
+    st.warning("⚠️ Some tasks may need review:")
+    st.write("\n".join(issues))
+
 
 if st.button("Generate XML"):
     if not user_input.strip():
@@ -158,6 +154,7 @@ if st.button("Generate XML"):
         download_url = f"{BACKEND_URL.rstrip('/')}{result['download_path']}"
         st.success("✅ File generated remotely!")
         st.markdown(f"[⬇️ Download XML File]({download_url})")
+
 
 
 
