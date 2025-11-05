@@ -3,7 +3,7 @@ import requests
 import json
 
 # ✅ Replace this with your ngrok public URL
-BACKEND_URL = "https://bea8a2b73844.ngrok-free.app"
+BACKEND_URL = "https://83c00fb037c5.ngrok-free.app"
 
 st.title("AI Project Planner (Remote Aspose Server)")
 
@@ -28,3 +28,4 @@ if uploaded_file:
         )
     else:
         st.error(f"❌ Server error: {response.text}")
+
