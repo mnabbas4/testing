@@ -109,10 +109,7 @@ def extract_project(raw_text: str):
 
 
 user_input = st.text_area("Describe your project:", height=300)
-issues = validate_plan(project)
-if issues:
-    st.warning("⚠️ Some tasks may need review:")
-    st.write("\n".join(issues))
+
 
 
 if st.button("Generate XML"):
@@ -154,6 +151,7 @@ if st.button("Generate XML"):
         download_url = f"{BACKEND_URL.rstrip('/')}{result['download_path']}"
         st.success("✅ File generated remotely!")
         st.markdown(f"[⬇️ Download XML File]({download_url})")
+
 
 
 
