@@ -17,7 +17,7 @@ from typing import List, Dict, Optional
 import streamlit as st
 import openai
 from pydantic import BaseModel, ValidationError, Field
-#import clr, sys, traceback
+import clr, sys, traceback
 import requests
 # ---------------------------
 # Configuration - update this to match your Aspose DLL folder
