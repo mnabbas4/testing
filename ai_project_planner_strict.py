@@ -27,7 +27,7 @@ ASPOSE_DLL_DIR = r"C:\Users\Syedm\AppData\Local\Programs\Microsoft VS Code\Aspos
 if not Path(ASPOSE_DLL_DIR).exists():
     raise RuntimeError(f"Aspose directory not found: {ASPOSE_DLL_DIR}")
 
-OPENAI_API_KEY = "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"
+
 if not OPENAI_API_KEY:
     st.error("❌ Missing OpenAI API key.")
     st.stop()
