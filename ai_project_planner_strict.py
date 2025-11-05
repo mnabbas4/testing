@@ -22,6 +22,8 @@ import requests
 # ---------------------------
 # Configuration - update this to match your Aspose DLL folder
 # ---------------------------
+BACKEND_URL = st.secrets["BACKEND_URL"]
+
 ASPOSE_DLL_DIR = r"C:\Users\Syedm\AppData\Local\Programs\Microsoft VS Code\Aspose.Tasks\NET45"
 # Make sure Aspose.Tasks.dll exists in ASPOSE_DLL_DIR
 if not Path(ASPOSE_DLL_DIR).exists():
