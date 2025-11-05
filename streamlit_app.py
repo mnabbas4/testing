@@ -4,6 +4,10 @@ import requests, json
 from pydantic import BaseModel, Field, ValidationError
 from typing import List, Dict, Optional
 
+# --- Add these two lines (fixes the datetime NameError + safer typing) ---
+from datetime import datetime
+import math
+
 st.set_page_config(page_title="AI Project Planner (Frontend)", layout="wide")
 st.title("🧠 AI Project Planner → Remote Aspose XML")
 
@@ -27,6 +31,8 @@ class ProjectModel(BaseModel):
     project_name: str
     start_date: str
     phases: List[PhaseModel]
+
+MODEL = "gpt-4o-mini"  # ensure MODEL is defined somewhere near top
 
 def extract_project(raw_text: str):
     """
@@ -54,13 +60,13 @@ def extract_project(raw_text: str):
 
     system_msg = (
         "You are an experienced project planner specializing in MS Project scheduling. "
-        "Convert the following description into a CLEAN JSON structure strictly following this schema:\n"
+        "Convert the following description into CLEAN JSON strictly following this schema:\n"
         f"{json.dumps(schema, indent=2)}\n\n"
         "Guidelines:\n"
         "- Use working-day durations (not calendar weeks).\n"
-        "- Derive approximate durations if not stated (e.g., small tasks → 2 days).\n"
+        "- Derive approximate durations if not stated (e.g., small tasks -> 2 days).\n"
         "- Convert milestones (no work) to duration_days = 0.\n"
-        "- Include dependencies logically (e.g., Design → Implementation).\n"
+        "- Include dependencies logically (e.g., Design -> Implementation).\n"
         "- Avoid extra fields, text, or commentary."
     )
 
@@ -76,32 +82,49 @@ def extract_project(raw_text: str):
     raw = response["choices"][0]["message"]["content"].strip()
     if raw.startswith("```"):
         raw = "\n".join(raw.splitlines()[1:-1])
+
     data = json.loads(raw)
 
-    # --- Normalization: fix typical GPT variations ---
-    if "project" in data:
+    # --- Normalization: fix common GPT variations ---
+    if isinstance(data, dict) and "project" in data:
         data = data["project"]
-    if "name" in data and "project_name" not in data:
-        data["project_name"] = data.pop("name")
-    data.setdefault("start_date", datetime.now().strftime("%Y-%m-%d"))
 
-    # Normalize durations (if strings like "3 weeks")
-    for phase in data.get("phases", []):
-        if isinstance(phase.get("duration_days"), str):
-            if "week" in phase["duration_days"].lower():
-                n = int("".join([c for c in phase["duration_days"] if c.isdigit()]) or "1")
-                phase["duration_days"] = n * 5
-            elif "day" in phase["duration_days"].lower():
-                n = int("".join([c for c in phase["duration_days"] if c.isdigit()]) or "1")
-                phase["duration_days"] = n
-        for task in phase.get("tasks", []):
-            if isinstance(task.get("duration_days"), str):
-                if "week" in task["duration_days"].lower():
-                    n = int("".join([c for c in task["duration_days"] if c.isdigit()]) or "1")
-                    task["duration_days"] = n * 5
-                elif "day" in task["duration_days"].lower():
-                    n = int("".join([c for c in task["duration_days"] if c.isdigit()]) or "1")
-                    task["duration_days"] = n
+    # accept 'name' -> 'project_name'
+    if isinstance(data, dict) and "name" in data and "project_name" not in data:
+        data["project_name"] = data.pop("name")
+
+    # default start_date to today if missing or empty
+    if not data.get("start_date"):
+        data["start_date"] = datetime.now().strftime("%Y-%m-%d")
+
+    def parse_duration_field(val):
+        # Accept integers, numeric strings, "3 weeks", "10 days"
+        if val is None:
+            return 1
+        if isinstance(val, (int, float)):
+            return int(val)
+        if isinstance(val, str):
+            s = val.strip().lower()
+            if "week" in s:
+                # extract first integer
+                digits = "".join([c for c in s if c.isdigit()])
+                n = int(digits) if digits else 1
+                return n * 5
+            if "day" in s:
+                digits = "".join([c for c in s if c.isdigit()])
+                n = int(digits) if digits else 1
+                return n
+            # fallback: try parse int
+            try:
+                return int(float(s))
+            except Exception:
+                return 1
+        return 1
+
+    for phase in data.get("phases", []) or []:
+        phase["duration_days"] = parse_duration_field(phase.get("duration_days"))
+        for task in phase.get("tasks", []) or []:
+            task["duration_days"] = parse_duration_field(task.get("duration_days"))
             task.setdefault("dependencies", [])
             task.setdefault("resources", [])
 
@@ -151,6 +174,7 @@ if st.button("Generate XML"):
         download_url = f"{BACKEND_URL.rstrip('/')}{result['download_path']}"
         st.success("✅ File generated remotely!")
         st.markdown(f"[⬇️ Download XML File]({download_url})")
+
 
 
 
