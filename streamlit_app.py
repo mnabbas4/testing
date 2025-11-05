@@ -11,7 +11,7 @@ from ai_project_planner_strict import extract_project_structure, ProjectModel
 # ---------------------
 
 openai.api_key = OPENAI_API_KEY
-BACKEND_URL = " https://bea8a2b73844.ngrok-free.app"  # replace this after starting backend
+BACKEND_URL = "https://bea8a2b73844.ngrok-free.app"  # replace this after starting backend
 
 st.set_page_config(page_title="AI Project Planner", layout="wide")
 st.title("🤖 AI Project Planner (Remote Mode)")
@@ -79,4 +79,5 @@ if st.button("Generate Project XML"):
 
         except Exception as e:
             st.error(f"Failed to reach backend: {e}")
+
 
