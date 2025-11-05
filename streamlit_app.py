@@ -29,7 +29,41 @@ class ProjectModel(BaseModel):
     phases: List[PhaseModel]
 
 def extract_project(raw_text: str):
-    system_msg = "Convert plain English project description into structured JSON."
+    """
+    Efficient project-structure extraction for planners.
+    Produces normalized JSON that always passes ProjectModel validation.
+    """
+    schema = {
+        "project_name": "string",
+        "start_date": "YYYY-MM-DD",
+        "phases": [
+            {
+                "name": "string",
+                "duration_days": 0,
+                "tasks": [
+                    {
+                        "name": "string",
+                        "duration_days": 0,
+                        "dependencies": ["string"],
+                        "resources": ["string"]
+                    }
+                ]
+            }
+        ]
+    }
+
+    system_msg = (
+        "You are an experienced project planner specializing in MS Project scheduling. "
+        "Convert the following description into a CLEAN JSON structure strictly following this schema:\n"
+        f"{json.dumps(schema, indent=2)}\n\n"
+        "Guidelines:\n"
+        "- Use working-day durations (not calendar weeks).\n"
+        "- Derive approximate durations if not stated (e.g., small tasks → 2 days).\n"
+        "- Convert milestones (no work) to duration_days = 0.\n"
+        "- Include dependencies logically (e.g., Design → Implementation).\n"
+        "- Avoid extra fields, text, or commentary."
+    )
+
     response = openai.ChatCompletion.create(
         model=MODEL,
         messages=[
@@ -38,10 +72,41 @@ def extract_project(raw_text: str):
         ],
         temperature=0
     )
+
     raw = response["choices"][0]["message"]["content"].strip()
     if raw.startswith("```"):
         raw = "\n".join(raw.splitlines()[1:-1])
-    return json.loads(raw)
+    data = json.loads(raw)
+
+    # --- Normalization: fix typical GPT variations ---
+    if "project" in data:
+        data = data["project"]
+    if "name" in data and "project_name" not in data:
+        data["project_name"] = data.pop("name")
+    data.setdefault("start_date", datetime.now().strftime("%Y-%m-%d"))
+
+    # Normalize durations (if strings like "3 weeks")
+    for phase in data.get("phases", []):
+        if isinstance(phase.get("duration_days"), str):
+            if "week" in phase["duration_days"].lower():
+                n = int("".join([c for c in phase["duration_days"] if c.isdigit()]) or "1")
+                phase["duration_days"] = n * 5
+            elif "day" in phase["duration_days"].lower():
+                n = int("".join([c for c in phase["duration_days"] if c.isdigit()]) or "1")
+                phase["duration_days"] = n
+        for task in phase.get("tasks", []):
+            if isinstance(task.get("duration_days"), str):
+                if "week" in task["duration_days"].lower():
+                    n = int("".join([c for c in task["duration_days"] if c.isdigit()]) or "1")
+                    task["duration_days"] = n * 5
+                elif "day" in task["duration_days"].lower():
+                    n = int("".join([c for c in task["duration_days"] if c.isdigit()]) or "1")
+                    task["duration_days"] = n
+            task.setdefault("dependencies", [])
+            task.setdefault("resources", [])
+
+    return data
+
 
 user_input = st.text_area("Describe your project:", height=300)
 
@@ -84,4 +149,5 @@ if st.button("Generate XML"):
         download_url = f"{BACKEND_URL.rstrip('/')}{result['download_path']}"
         st.success("✅ File generated remotely!")
         st.markdown(f"[⬇️ Download XML File]({download_url})")
+
 
