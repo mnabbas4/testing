@@ -19,10 +19,6 @@ def get_openai_client():
         return None
 
 
-class EmbeddingsEngine:
-    def __init__(self):
-        self.client = get_openai_client()
-
 
 class EmbeddingsEngine:
     def __init__(self):
@@ -68,4 +64,5 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix('').parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
 
