@@ -1,3 +1,5 @@
+regex
+sentence-transformers==3.1.1
 streamlit==1.40.0
 pandas==2.2.3
 openai==1.52.0
@@ -7,4 +9,4 @@ symspellpy==6.7.7
 rapidfuzz==3.10.0
 chromadb==0.5.4
 regex
-sentence-transformers==3.1.1
+tqdm
