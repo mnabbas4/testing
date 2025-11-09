@@ -1,12 +1,14 @@
 regex
+tqdm
+openpyxl
+# === APMA stable dependencies ===
 streamlit==1.40.0
 pandas==2.2.3
-openai==1.40.0
 numpy==1.26.4
+openai==1.40.0
 textblob==0.18.0
 symspellpy==6.7.7
 rapidfuzz==3.10.0
 chromadb==0.5.4
-regex
-tqdm
-openpyxl
+spacy==3.7.5
+openpyxl==3.1.5
