@@ -1,12 +1,24 @@
-# modules/embeddings_engine.py
 import os
-import json
-import pandas as pd
-from pathlib import Path
+import streamlit as st
 from openai import OpenAI
+from pathlib import Path
+import json
+import numpy as np
 
+# --- Load API key from Streamlit secrets or environment ---
+OPENAI_API_KEY = None
+if "OPENAI_API_KEY" in st.secrets:
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+elif os.getenv("OPENAI_API_KEY"):
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-
+# --- Initialize client safely ---
+try:
+    client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+except Exception as e:
+    st.error(f"Failed to initialize OpenAI client: {e}")
+    client = None
+    
 def get_openai_client():
     """
     Safe lazy initialization of the OpenAI client.
@@ -61,5 +73,6 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix('').parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
 
 
