@@ -6,11 +6,7 @@ from openai import OpenAI
 import json
 
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-else:
-    client = None
+
 
 class EmbeddingsEngine:
     def __init__(self):
@@ -49,4 +45,5 @@ class EmbeddingsEngine:
         out = mem_path.with_suffix('').parent / f"{mem_id}_embeddings.json"
         out.write_text(json.dumps(embeddings))
         return str(out)
+
 
