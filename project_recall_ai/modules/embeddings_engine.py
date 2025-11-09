@@ -1,9 +1,10 @@
 # modules/embeddings_engine.py
 import os
-import json
+import numpy as np
 from pathlib import Path
 from openai import OpenAI
-OPENAI_API_KEY = "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"
+import json
+
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if OPENAI_API_KEY:
@@ -13,19 +14,27 @@ else:
 
 class EmbeddingsEngine:
     def __init__(self):
-        if client is None:
-            raise ValueError("OPENAI_API_KEY is not set. Please set it to compute embeddings.")
-        self.client = client
+        self.api_key = os.getenv("OPENAI_API_KEY")
+        self.client = None
+        if self.api_key:
+            self.client = OpenAI(api_key=self.api_key)
+        else:
+            raise ValueError("OPENAI_API_KEY environment variable not found.")
+
+    def embed_texts(self, texts):
+        if not self.client:
+            raise ValueError("OpenAI client is not initialized.")
+        response = self.client.embeddings.create(
+            model="text-embedding-3-large",
+            input=texts
+        )
+        return [d.embedding for d in response.data]
 
     def _text_for_row(self, row):
         cols = ['Project Category','Project Reference','Phase','Problems Encountered','Solutions Adopted']
         return " || ".join([str(row.get(c,'')) for c in cols if row.get(c,'')])
 
-    def embed_texts(self, texts):
-        # returns list of embeddings (lists of floats)
-        # client.embeddings.create -> response.data[*].embedding
-        resp = self.client.embeddings.create(model="text-embedding-3-large", input=texts)
-        return [item.embedding for item in resp.data]
+
 
     def index_dataframe(self, memory_path, df, id_prefix='mem'):
         """
@@ -40,3 +49,4 @@ class EmbeddingsEngine:
         out = mem_path.with_suffix('').parent / f"{mem_id}_embeddings.json"
         out.write_text(json.dumps(embeddings))
         return str(out)
+
