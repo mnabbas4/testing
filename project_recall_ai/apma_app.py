@@ -6,7 +6,7 @@ from modules.embeddings_engine import EmbeddingsEngine
 from modules.recall_engine import RecallEngine
 from modules.utils import ensure_data_dirs
 import pandas as pd
-OPENAI_API_KEY = "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"
+
 
 st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
 ensure_data_dirs()
@@ -188,3 +188,4 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
