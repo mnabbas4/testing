@@ -1,11 +1,20 @@
 # apma_app.py
+import sys, os
 import streamlit as st
-from modules.file_manager import MemoryManager
-from modules.data_handler import DataHandler
-from modules.embeddings_engine import EmbeddingsEngine
-from modules.recall_engine import RecallEngine
 from modules.utils import ensure_data_dirs
 import pandas as pd
+
+
+# Add this directory to Python path
+sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
+
+from modules.embeddings_engine import EmbeddingsEngine
+
+from modules.recall_engine import RecallEngine
+from modules.file_manager import MemoryManager
+
+from modules.data_handler import DataHandler
+
 
 
 st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
@@ -188,4 +197,5 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
