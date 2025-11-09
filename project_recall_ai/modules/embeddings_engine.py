@@ -1,50 +1,62 @@
+# modules/embeddings_engine.py
 import os
-import numpy as np
+import json
+import pandas as pd
 from pathlib import Path
 from openai import OpenAI
-import json
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if OPENAI_API_KEY:
-    client = OpenAI(api_key=OPENAI_API_KEY)
-else:
-    client = None
+
+def get_openai_client():
+    """
+    Safe lazy initialization of the OpenAI client.
+    Prevents Streamlit Cloud import errors and proxy issues.
+    """
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+    try:
+        return OpenAI(api_key=key)
+    except Exception:
+        return None
+
 
 class EmbeddingsEngine:
     def __init__(self):
-        self.api_key = os.getenv("OPENAI_API_KEY")
-        self.client = None
-        if self.api_key:
-            self.client = OpenAI(api_key=self.api_key)
-        else:
-            raise ValueError("OPENAI_API_KEY environment variable not found.")
-
-    def embed_texts(self, texts):
-        if not self.client:
-            raise ValueError("OpenAI client is not initialized.")
-        response = self.client.embeddings.create(
-            model="text-embedding-3-large",
-            input=texts
-        )
-        return [d.embedding for d in response.data]
-
+        self.client = get_openai_client()
 
     def _text_for_row(self, row):
-        cols = ['Project Category','Project Reference','Phase','Problems Encountered','Solutions Adopted']
-        return " || ".join([str(row.get(c,'')) for c in cols if row.get(c,'')])
+        """
+        Convert row dict to a unified text string representation.
+        Used for embedding generation.
+        """
+        cols = ['Project Category', 'Project Reference', 'Phase',
+                'Problems Encountered', 'Solutions Adopted']
+        return " | ".join([str(row.get(c, "")) for c in cols if row.get(c, "")])
 
+    def embed_texts(self, texts):
+        """
+        Generate embeddings for a list of texts using OpenAI Embeddings API.
+        Falls back gracefully if no API key is configured.
+        """
+        if not self.client:
+            raise RuntimeError("OpenAI client not configured. Set OPENAI_API_KEY in Streamlit secrets.")
 
+        try:
+            resp = self.client.embeddings.create(
+                model="text-embedding-3-large",
+                input=texts
+            )
+            return [d.embedding for d in resp.data]
+        except Exception as e:
+            raise RuntimeError(f"Embedding generation failed: {e}")
 
     def index_dataframe(self, memory_path, df, id_prefix='mem'):
         """
-        memory_path: path to saved dataframe file (e.g., data/memories/memory_1.parquet)
-        Creates and saves embeddings JSON as: data/memories/{mem_id}_embeddings.json
+        Embed and store the full dataframe as a list of embeddings JSON file.
         """
         texts = [self._text_for_row(r) for _, r in df.iterrows()]
         embeddings = self.embed_texts(texts)
 
-        mem_path = Path(memory_path)
-        mem_id = mem_path.stem  # e.g., memory_1
-        out = mem_path.with_suffix('').parent / f"{mem_id}_embeddings.json"
-        out.write_text(json.dumps(embeddings))
-        return str(out)
+        out_path = Path(memory_path).with_suffix('').parent / f"{id_prefix}_embeddings.json"
+        out_path.write_text(json.dumps(embeddings))
+        return str(out_path)
