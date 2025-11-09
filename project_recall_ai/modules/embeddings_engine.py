@@ -1,31 +1,33 @@
 import os
 import json
 import streamlit as st
-from openai import OpenAI
 from pathlib import Path
-import numpy as np
+from openai import OpenAI
 
-# --- Load API key from Streamlit secrets or environment ---
 def get_api_key():
     if "OPENAI_API_KEY" in st.secrets:
         return st.secrets["OPENAI_API_KEY"]
-    elif os.getenv("OPENAI_API_KEY"):
-        return os.getenv("OPENAI_API_KEY")
-    return None
+    return os.getenv("OPENAI_API_KEY")
 
 
 def get_openai_client():
     """
-    Safe lazy initialization of the OpenAI client.
-    Works in both local and Streamlit Cloud environments.
+    Safe lazy initialization that avoids Streamlit proxy conflicts.
+    Compatible with OpenAI < 1.50.0.
     """
     key = get_api_key()
     if not key:
+        st.error("❌ No OpenAI API key found. Please add it in Streamlit secrets.")
         return None
     try:
+        # create minimal client, no proxy args
         return OpenAI(api_key=key)
+    except TypeError:
+        # fallback for Streamlit proxy environments
+        from openai import OpenAI as SimpleClient
+        return SimpleClient(api_key=key)
     except Exception as e:
-        st.warning(f"⚠️ Failed to initialize OpenAI client: {e}")
+        st.error(f"❌ Failed to initialize OpenAI client: {e}")
         return None
 
 
