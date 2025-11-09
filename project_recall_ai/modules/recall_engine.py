@@ -1,7 +1,6 @@
 # modules/recall_engine.py
 import os
 import json
-import re
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -9,9 +8,16 @@ from textblob import TextBlob
 from rapidfuzz import fuzz
 from openai import OpenAI
 
-# Initialize OpenAI client (read from env)
-_OPENAI_KEY = os.getenv("OPENAI_API_KEY")
-_openai_client = OpenAI(api_key=_OPENAI_KEY) if _OPENAI_KEY else None
+
+# ✅ Safe lazy client initialization (prevents Streamlit Cloud import errors)
+def get_openai_client():
+    key = os.getenv("OPENAI_API_KEY")
+    if not key:
+        return None
+    try:
+        return OpenAI(api_key=key)
+    except Exception:
+        return None
 
 
 def _cosine_similarity(a, b):
@@ -26,216 +32,210 @@ def _cosine_similarity(a, b):
 
 
 class RecallEngine:
-    def __init__(self, emb_engine, mem_manager,
-                 phase_match_threshold=75,
-                 category_match_threshold=75,
-                 reference_match_threshold=75):
+    def __init__(self, emb_engine, mem_manager, phase_match_threshold=75, category_match_threshold=75):
         self.emb_engine = emb_engine
         self.mem_manager = mem_manager
         self.phase_threshold = phase_match_threshold
         self.category_threshold = category_match_threshold
-        self.reference_threshold = reference_match_threshold
 
-    # ------------------------------- Spell correction -------------------------
     def _correct_spelling(self, text):
         try:
             return str(TextBlob(text).correct())
         except Exception:
             return text
 
-    # ------------------------------- Load embeddings --------------------------
     def _load_embeddings(self, mem_id):
-        path = Path(self.mem_manager.base) / "memories" / f"{mem_id}_embeddings.json"
+        path = Path(self.mem_manager.base) / 'memories' / f"{mem_id}_embeddings.json"
         if not path.exists():
             return None
         return json.loads(path.read_text())
 
-    # ------------------------------- Simple NLP extraction ---------------------
     def _extract_context_hints(self, query, df):
-        """Detect likely phase, category, or reference words in query."""
+        """Detect likely phase/category mentions in the query using fuzzy matching."""
         q = query.lower()
-        matched_phase = matched_category = matched_reference = None
+        matched_phase, matched_category = None, None
 
-        # unique values from df
-        phases = [str(x) for x in pd.unique(df["Phase"].dropna()) if str(x).strip()]
-        categories = [str(x) for x in pd.unique(df["Project Category"].dropna()) if str(x).strip()]
-        references = [str(x) for x in pd.unique(df["Project Reference"].dropna()) if str(x).strip()]
+        phases = [str(x) for x in pd.unique(df['Phase'].dropna()) if str(x).strip()]
+        categories = [str(x) for x in pd.unique(df['Project Category'].dropna()) if str(x).strip()]
 
-        # regex helpers
-        regex_words = re.findall(r"\b[a-zA-Z0-9\-]+\b", q)
+        for p in phases:
+            if fuzz.partial_ratio(p.lower(), q) >= self.phase_threshold:
+                matched_phase = p
+                break
 
-        # fuzzy matchers
-        def fuzzy_detect(options, threshold):
-            best = None
-            best_score = 0
-            for opt in options:
-                for token in regex_words:
-                    score = fuzz.partial_ratio(opt.lower(), token)
-                    if score > best_score and score >= threshold:
-                        best, best_score = opt, score
-            return best
+        for c in categories:
+            if fuzz.partial_ratio(c.lower(), q) >= self.category_threshold:
+                matched_category = c
+                break
 
-        matched_phase = fuzzy_detect(phases, self.phase_threshold)
-        matched_category = fuzzy_detect(categories, self.category_threshold)
-        matched_reference = fuzzy_detect(references, self.reference_threshold)
+        return matched_phase, matched_category
 
-        return matched_phase, matched_category, matched_reference
+    def query_memory(self, mem_id, query, min_score=0.25, spell_correction=True,
+                     hard_limit=None, enforce_context=False, weight_text=0.70,
+                     weight_phase=0.15, weight_category=0.15, fallback_k=3):
 
-    # ------------------------------- Main query -------------------------------
-    def query_memory(self, mem_id, query,
-                     min_score=0.25, spell_correction=True,
-                     weight_text=0.70, weight_phase=0.15, weight_category=0.10,
-                     fallback_k=3):
-        """Semantic recall with contextual awareness (phase/category/reference)."""
-        q_text = self._correct_spelling(query) if spell_correction else query
+        if spell_correction:
+            q_text = self._correct_spelling(query)
+        else:
+            q_text = query
 
         df = self.mem_manager.load_memory_dataframe(mem_id)
         if df is None or df.empty:
-            return pd.DataFrame()
+            return pd.DataFrame(columns=[
+                'FinalScore', 'TextScore', 'PhaseBonus', 'CategoryBonus',
+                'Project Category', 'Project Reference', 'Phase',
+                'Problems Encountered', 'Solutions Adopted'
+            ])
 
         emb_list = self._load_embeddings(mem_id)
         if emb_list is None:
-            raise FileNotFoundError(
-                f"Embeddings for memory '{mem_id}' not found. Please index first."
-            )
+            raise FileNotFoundError(f"Embeddings for memory '{mem_id}' not found. Please index first.")
 
-        # Detect contextual hints
-        matched_phase, matched_category, matched_reference = self._extract_context_hints(q_text, df)
+        matched_phase, matched_category = self._extract_context_hints(q_text, df)
 
-        # Embed query
+        candidate_idxs = list(range(len(emb_list)))
+        if enforce_context:
+            if matched_phase:
+                candidate_idxs = [
+                    i for i in candidate_idxs
+                    if str(df.iloc[i].get('Phase', '')).strip().lower() == matched_phase.lower()
+                ]
+            if matched_category:
+                candidate_idxs = [
+                    i for i in candidate_idxs
+                    if str(df.iloc[i].get('Project Category', '')).strip().lower() == matched_category.lower()
+                ]
+            if not candidate_idxs:
+                candidate_idxs = list(range(len(emb_list)))
+
         q_emb = self.emb_engine.embed_texts([q_text])[0]
 
-        results = []
-        for i, row_emb in enumerate(emb_list):
-            row = df.iloc[i]
+        scored = []
+        for idx in candidate_idxs:
+            row_emb = emb_list[idx]
             text_score = _cosine_similarity(q_emb, row_emb)
 
-            # bonus weighting
-            phase_bonus = category_bonus = reference_bonus = 0.0
-
+            phase_bonus = 0.0
             if matched_phase:
-                ph = str(row.get("Phase", "")).lower()
-                phase_bonus = fuzz.partial_ratio(ph, matched_phase.lower()) / 100
+                p = str(df.iloc[idx].get('Phase', '')).lower()
+                ph_score = fuzz.partial_ratio(p, matched_phase.lower()) if p else 0
+                phase_bonus = 1.0 if ph_score >= 85 else 0.5 if ph_score >= 65 else 0.0
 
+            category_bonus = 0.0
             if matched_category:
-                cat = str(row.get("Project Category", "")).lower()
-                category_bonus = fuzz.partial_ratio(cat, matched_category.lower()) / 100
+                c = str(df.iloc[idx].get('Project Category', '')).lower()
+                cat_score = fuzz.partial_ratio(c, matched_category.lower()) if c else 0
+                category_bonus = 1.0 if cat_score >= 85 else 0.5 if cat_score >= 65 else 0.0
 
-            if matched_reference:
-                ref = str(row.get("Project Reference", "")).lower()
-                reference_bonus = fuzz.partial_ratio(ref, matched_reference.lower()) / 100
-
-            # weighted score
             final_score = (
                 weight_text * text_score
                 + weight_phase * phase_bonus
                 + weight_category * category_bonus
-                + 0.05 * reference_bonus
             )
 
-            results.append({
-                "idx": i,
-                "FinalScore": round(final_score, 4),
-                "TextScore": round(text_score, 4),
-                "PhaseBonus": round(phase_bonus, 4),
-                "CategoryBonus": round(category_bonus, 4),
-                "ReferenceBonus": round(reference_bonus, 4)
+            scored.append({
+                'idx': idx,
+                'TextScore': round(text_score, 4),
+                'PhaseBonus': round(phase_bonus, 4),
+                'CategoryBonus': round(category_bonus, 4),
+                'FinalScore': round(final_score, 4)
             })
 
-        scored_df = pd.DataFrame(results).sort_values("FinalScore", ascending=False)
+        scored_df = pd.DataFrame(scored).sort_values('FinalScore', ascending=False)
+        matches = scored_df[scored_df['FinalScore'] >= float(min_score)].copy()
 
-        # apply dynamic threshold
-        matches = scored_df[scored_df["FinalScore"] >= float(min_score)]
+        used_fallback = False
         if matches.empty:
-            matches = scored_df.head(fallback_k)
+            used_fallback = True
+            matches = scored_df.sort_values('TextScore', ascending=False).head(fallback_k)
 
-        # map results back to main data
-        rows = []
+        if hard_limit is not None and isinstance(hard_limit, int) and hard_limit > 0:
+            matches = matches.head(hard_limit)
+
+        out_rows = []
         for _, r in matches.iterrows():
-            i = int(r["idx"])
-            base = df.iloc[i].to_dict()
-            rows.append({
-                "Score": r["FinalScore"],
-                "Project Category": base.get("Project Category", ""),
-                "Project Reference": base.get("Project Reference", ""),
-                "Phase": base.get("Phase", ""),
-                "Problem": base.get("Problems Encountered", ""),
-                "Solution": base.get("Solutions Adopted", ""),
+            i = int(r['idx'])
+            row = df.iloc[i].to_dict()
+            out_rows.append({
+                'FinalScore': round(float(r['FinalScore']), 4),
+                'TextScore': r['TextScore'],
+                'PhaseBonus': r['PhaseBonus'],
+                'CategoryBonus': r['CategoryBonus'],
+                'Project Category': row.get('Project Category', ''),
+                'Project Reference': row.get('Project Reference', ''),
+                'Phase': row.get('Phase', ''),
+                'Problems Encountered': row.get('Problems Encountered', ''),
+                'Solutions Adopted': row.get('Solutions Adopted', ''),
             })
 
-        out = pd.DataFrame(rows)
-        out.attrs["matched_phase"] = matched_phase
-        out.attrs["matched_category"] = matched_category
-        out.attrs["matched_reference"] = matched_reference
-        return out
+        out_df = pd.DataFrame(out_rows)
+        out_df.attrs['used_fallback'] = used_fallback
+        out_df.attrs['matched_phase'] = matched_phase
+        out_df.attrs['matched_category'] = matched_category
+        return out_df
 
-    # ------------------------------- Structured insights -----------------------
     def generate_structured_insights(self, matches_df):
+        """Aggregate problems/solutions per phase for factual insights."""
         if matches_df is None or matches_df.empty:
-            return {"top_problems": [], "per_phase_summary": {}}
+            return {'top_problems': [], 'per_phase_summary': {}}
 
         df = matches_df.copy()
-        df["Problem_norm"] = df["Problem"].astype(str).str.strip().str.lower()
-        grouped = (
-            df.groupby("Problem_norm")
-            .agg(
-                count=("Problem_norm", "size"),
-                avg_score=("Score", "mean"),
-                solutions=("Solution", lambda s: list(pd.unique(s)))
-            )
-            .reset_index()
-            .sort_values("count", ascending=False)
-        )
+        df['Problem_norm'] = df['Problems Encountered'].astype(str).str.strip().str.lower()
 
-        top_problems = []
-        for _, row in grouped.iterrows():
-            top_problems.append({
-                "problem": row["Problem_norm"],
-                "count": int(row["count"]),
-                "avg_score": round(float(row["avg_score"]), 4),
-                "solutions": row["solutions"],
-            })
+        grouped = df.groupby('Problem_norm').agg(
+            count=('Problem_norm', 'size'),
+            avg_score=('FinalScore', 'mean'),
+            solutions=('Solutions Adopted', lambda s: list(pd.unique(s)))
+        ).reset_index().sort_values('count', ascending=False)
+
+        top_problems = [{
+            'problem': row['Problem_norm'],
+            'count': int(row['count']),
+            'avg_score': round(float(row['avg_score']), 4),
+            'solutions': row['solutions']
+        } for _, row in grouped.iterrows()]
 
         per_phase = {}
-        for phase, grp in df.groupby("Phase"):
+        for phase, grp in df.groupby('Phase'):
             per_phase[phase] = {
-                "matches": int(len(grp)),
-                "top_problems": grp["Problem"].value_counts().head(5).to_dict(),
+                'matches': int(len(grp)),
+                'top_problems': grp['Problems Encountered'].value_counts().head(5).to_dict()
             }
 
-        return {"top_problems": top_problems, "per_phase_summary": per_phase}
+        return {'top_problems': top_problems, 'per_phase_summary': per_phase}
 
-    # ------------------------------- Narrative generation ----------------------
     def generate_insights_narrative(self, structured_insights, max_tokens=400, temperature=0.2):
-        if _openai_client is None:
-            return "OpenAI client not configured. Set OPENAI_API_KEY."
+        """Generate concise narrative strictly based on structured facts."""
+        client = get_openai_client()
+        if client is None:
+            return "OpenAI client not configured. Set OPENAI_API_KEY to enable narrative generation."
 
         facts = []
-        if structured_insights.get("top_problems"):
-            facts.append("Observed recurring issues with their counts and solutions:")
-            for p in structured_insights["top_problems"]:
-                sols = "; ".join(p["solutions"][:3]) if p["solutions"] else "No solutions recorded"
-                facts.append(f"- {p['problem']} ({p['count']}×) → Solutions: {sols}")
+        if structured_insights.get('top_problems'):
+            facts.append("Top problems (problem; count; avg_score; example solutions):")
+            for p in structured_insights['top_problems']:
+                example_sols = "; ".join(p['solutions'][:3]) if p['solutions'] else "No solutions recorded"
+                facts.append(f"- {p['problem']} ; {p['count']} occurrences ; avg_score={p['avg_score']} ; solutions: {example_sols}")
 
-        if structured_insights.get("per_phase_summary"):
-            facts.append("Per-phase issue summary:")
-            for ph, info in structured_insights["per_phase_summary"].items():
-                top = ", ".join(f"{k}:{v}" for k, v in info["top_problems"].items())
-                facts.append(f"- {ph}: {top}")
+        if structured_insights.get('per_phase_summary'):
+            facts.append("Per-phase summary (phase: matches -> top problems):")
+            for ph, info in structured_insights['per_phase_summary'].items():
+                top = ", ".join(f"{k}:{v}" for k, v in info['top_problems'].items())
+                facts.append(f"- {ph}: {info['matches']} matches -> {top}")
 
         prompt = (
-            "You are a project memory assistant. Summarize these factual findings into practical "
-            "lessons to prevent repeating mistakes. Use clear, numbered bullet points.\n\nFacts:\n"
-            + "\n".join(facts)
+            "You are an assistant that only produces concise, factual bullet points "
+            "strictly based on the provided facts. Do NOT add speculation.\n\n"
+            "Facts:\n" + "\n".join(facts)
         )
 
         try:
-            resp = _openai_client.chat.completions.create(
+            resp = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_tokens=max_tokens
             )
-            return resp.choices[0].message.content.strip()
-        except Exception as e:
-            return f"Failed to generate narrative: {e}"
+            return resp.choices[0].message.content
+        except Exception:
+            return "Failed to generate narrative from OpenAI."
