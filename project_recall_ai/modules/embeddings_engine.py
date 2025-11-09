@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import streamlit as st
 from openai import OpenAI
-
+OPENAI_API_KEY = "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"
 # --- Safe client init ---
 def get_openai_client():
     key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
@@ -22,7 +22,7 @@ def get_openai_client():
 
 class EmbeddingsEngine:
     def __init__(self):
-        self.client = get_openai_client()
+        
 
     def _text_for_row(self, row):
         """
@@ -64,5 +64,6 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix('').parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
 
 
