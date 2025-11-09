@@ -9,3 +9,4 @@ rapidfuzz==3.10.0
 chromadb==0.5.4
 regex
 tqdm
+openpyxl
