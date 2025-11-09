@@ -5,7 +5,7 @@ import pandas as pd
 from pathlib import Path
 from openai import OpenAI
 
-st.write("Key detected:", bool(os.getenv("OPENAI_API_KEY")))
+
 
 def get_openai_client():
     """
@@ -61,4 +61,5 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix('').parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
 
