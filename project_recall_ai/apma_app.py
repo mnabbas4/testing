@@ -1,3 +1,24 @@
+# apma_app.py  (top of file — must be line 1)
+import os
+import streamlit as st
+
+# ✅ Load key into environment BEFORE importing anything else
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+        st.sidebar.success("✅ OpenAI key loaded.")
+    else:
+        st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
+except Exception as e:
+    st.error(f"Error loading secrets: {e}")
+import sys
+import pandas as pd
+from modules.utils import ensure_data_dirs
+sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
+from modules.embeddings_engine import EmbeddingsEngine
+from modules.recall_engine import RecallEngine
+from modules.file_manager import MemoryManager
+from modules.data_handler import DataHandler
 
 
 
@@ -42,6 +63,8 @@ from modules.data_handler import DataHandler
 
 
 st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
+st.sidebar.write("🔑 Key prefix:", os.getenv("OPENAI_API_KEY", "")[:10])
+
 ensure_data_dirs()
 
 st.title("AI Project Memory Assistant (APMA)")
@@ -193,13 +216,18 @@ elif mode == "Query Knowledge Base":
                 st.json(insights['per_phase_summary'])
 
             # LLM narrative generation (uses stored insights, won't refresh the page)
+           
+            
+
             if st.button("Generate human-readable insights (LLM)"):
-                if OPENAI_API_KEY is None:
+                if not os.getenv("OPENAI_API_KEY"):
                     st.error("OpenAI key not configured. Set OPENAI_API_KEY to enable narrative generation.")
                 else:
                     with st.spinner("Generating narrative from facts..."):
                         narrative = recall_engine.generate_insights_narrative(insights)
                         st.session_state['last_narrative'] = narrative
+
+           
             if st.session_state['last_narrative']:
                 st.markdown("**Narrative (based strictly on recorded facts):**")
                 st.write(st.session_state['last_narrative'])
@@ -221,6 +249,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
