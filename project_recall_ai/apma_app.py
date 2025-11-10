@@ -3,7 +3,7 @@ import os
 import streamlit as st
 
 st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
-
+st.sidebar.success("✅ OpenAI key loaded.")
 # ✅ Load key into environment BEFORE importing anything else
 try:
     if "OPENAI_API_KEY" in st.secrets:
@@ -217,6 +217,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
