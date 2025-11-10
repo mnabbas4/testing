@@ -50,11 +50,11 @@ def _get_openai_key():
         os.environ["OPENAI_API_KEY"] = key
     return key
 
-
+"""
 def _make_client():
-    """
+#"    
     Creates OpenAI client safely with all fallback handling.
-    """
+#"    
     key = _get_openai_key()
     if not key:
         if st:
@@ -68,7 +68,7 @@ def _make_client():
         if st:
             st.error(f"Failed to initialize OpenAI client: {e}")
         return None
-
+"""
 
 class EmbeddingsEngine:
     def __init__(self):
@@ -106,5 +106,6 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
 
 
