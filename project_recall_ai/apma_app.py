@@ -8,9 +8,10 @@ st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wi
 try:
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-        st.sidebar.success("✅ OpenAI key loaded.")
+        #st.sidebar.success("✅ OpenAI key loaded.")
     else:
         st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
+         st.sidebar.success("✅ OpenAI key Not loaded.")
 except Exception as e:
     st.error(f"Error loading secrets: {e}")
 import sys
@@ -217,6 +218,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
