@@ -11,7 +11,7 @@ try:
         #st.sidebar.success("✅ OpenAI key loaded.")
     else:
         st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
-         st.sidebar.success("✅ OpenAI key Not loaded.")
+        st.sidebar.success("✅ OpenAI key Not loaded.")
 except Exception as e:
     st.error(f"Error loading secrets: {e}")
 import sys
@@ -218,6 +218,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
