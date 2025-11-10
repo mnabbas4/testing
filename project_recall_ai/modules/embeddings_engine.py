@@ -1,3 +1,4 @@
+# modules/embeddings_engine.py
 import os
 import streamlit as st
 from openai import OpenAI
@@ -21,13 +22,13 @@ def _make_client():
         st.warning("⚠️ No OpenAI API key found. Please add it in Streamlit → Settings → Secrets.")
         return None
     try:
-        return OpenAI(api_key=key, max_retries=2, timeout=60)
-    except TypeError:
-        try:
-            return OpenAI(api_key=key)
-        except Exception as e:
-            st.error(f"Failed to initialize OpenAI client: {e}")
-            return None
+        # ✅ Simplified for Streamlit Cloud (no proxies/max_retries/timeout)
+        client = OpenAI(api_key=key)
+        return client
+    except Exception as e:
+        st.error(f"Failed to initialize OpenAI client: {e}")
+        return None
+
 
 class EmbeddingsEngine:
     def __init__(self):
@@ -45,7 +46,7 @@ class EmbeddingsEngine:
 
     def embed_texts(self, texts):
         if not self.client:
-            st.warning("⚠️ Using dummy embeddings (no API key found).")
+            st.warning("⚠️ Using dummy embeddings (no API key found or client init failed).")
             return [np.random.rand(1536).tolist() for _ in texts]
 
         try:
