@@ -1,23 +1,39 @@
 import os
-import json
-from pathlib import Path
-import numpy as np
 import streamlit as st
 from openai import OpenAI
+from pathlib import Path
+import json
+import numpy as np
 
-# --- Safe client init ---
-def get_openai_client():
-    key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
+# --- Get API key (works both locally and on Streamlit Cloud) ---
+def _get_openai_key():
+    # Try Streamlit secrets first
+    try:
+        if hasattr(st, "secrets") and "OPENAI_API_KEY" in st.secrets:
+            return st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        pass
+    # Fallback to environment variable
+    return os.getenv("OPENAI_API_KEY")
+
+# --- Safe client creation ---
+def _make_client():
+    key = _get_openai_key()
     if not key:
-        st.error("❌ No OpenAI API key found in Streamlit secrets.")
+        st.warning("⚠️ No OpenAI API key found. Please add it in Streamlit → Settings → Secrets.")
         return None
     try:
-        # Compatible with openai<1.50 (no proxy args)
-        return OpenAI(api_key=key)
-    except Exception as e:
-        st.error(f"⚠️ OpenAI client init failed: {e}")
-        return None
+        # Explicitly disable proxies (fixes 'unexpected keyword argument proxies')
+        return OpenAI(api_key=key, max_retries=2, timeout=60)
+    except TypeError:
+        # Some Streamlit environments inject proxy params — handle gracefully
+        try:
+            return OpenAI(api_key=key)
+        except Exception as e:
+            st.error(f"Failed to initialize OpenAI client: {e}")
+            return None
 
+client = _make_client()
 
 class EmbeddingsEngine:
     def __init__(self):
@@ -64,6 +80,7 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix('').parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
 
 
 
