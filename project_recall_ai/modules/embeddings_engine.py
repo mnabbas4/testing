@@ -2,7 +2,20 @@ import os
 import json
 import numpy as np
 from pathlib import Path
+import os
+import streamlit as st
 
+st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
+
+# ✅ Load key into environment BEFORE importing anything else
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+        #st.sidebar.success("✅ OpenAI key loaded.")
+    else:
+        st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
+except Exception as e:
+    st.error(f"Error loading secrets: {e}")
 # Streamlit is optional — imported safely
 try:
     import streamlit as st
@@ -94,3 +107,4 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
