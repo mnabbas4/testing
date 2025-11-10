@@ -2,6 +2,8 @@
 import os
 import streamlit as st
 
+st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
+
 # ✅ Load key into environment BEFORE importing anything else
 try:
     if "OPENAI_API_KEY" in st.secrets:
@@ -28,7 +30,7 @@ from modules.data_handler import DataHandler
 
 
 
-st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
+#st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
 
 
 ensure_data_dirs()
@@ -219,6 +221,7 @@ else:  # Settings
 
 
 st.sidebar.success("✅ OpenAI key loaded.")
+
 
 
 
