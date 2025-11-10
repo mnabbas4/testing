@@ -14,6 +14,11 @@ from modules.recall_engine import RecallEngine
 from modules.file_manager import MemoryManager
 
 from modules.data_handler import DataHandler
+import os, streamlit as st
+
+# Ensure secrets propagate to environment variables for submodules
+if "OPENAI_API_KEY" in st.secrets:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 
 
 
@@ -197,5 +202,6 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
