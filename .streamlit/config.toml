@@ -1,2 +1,0 @@
-[build]
-command = "pip install -r project_recall_ai/requirements.txt"
