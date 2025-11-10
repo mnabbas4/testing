@@ -6,7 +6,7 @@ import streamlit as st
 try:
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-        st.sidebar.success("✅ OpenAI key loaded.")
+        #st.sidebar.success("✅ OpenAI key loaded.")
     else:
         st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
 except Exception as e:
@@ -249,6 +249,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
