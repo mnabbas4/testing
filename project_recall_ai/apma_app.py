@@ -1,28 +1,42 @@
+
+
+
+
+
+
+
+
 # apma_app.py
-import sys, os
+import os
 import streamlit as st
+
+# --- Force OpenAI key load before anything else ---
+if "OPENAI_API_KEY" in st.secrets:
+    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
+else:
+    st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
+
+# ✅ now safe to import the rest
+import sys
 from modules.utils import ensure_data_dirs
 import pandas as pd
-
 
 # Add this directory to Python path
 sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
 
 from modules.embeddings_engine import EmbeddingsEngine
-
 from modules.recall_engine import RecallEngine
 from modules.file_manager import MemoryManager
-
 from modules.data_handler import DataHandler
 
 
-import os, streamlit as st
 
-# --- Ensure OpenAI key is available to all modules ---
-if "OPENAI_API_KEY" in st.secrets:
-    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-else:
-    st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
+
+
+
+
+
+
 
 
 
@@ -206,6 +220,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
