@@ -6,9 +6,7 @@ import streamlit as st
 try:
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-        #st.sidebar.success("✅ OpenAI key loaded.")
-        print(OPENAI_API_KEY)
-    
+        st.sidebar.success("✅ OpenAI key loaded.")
     else:
         st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
 except Exception as e:
@@ -17,45 +15,11 @@ import sys
 import pandas as pd
 from modules.utils import ensure_data_dirs
 sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
-from modules.embeddings_engine import EmbeddingsEngine
-from modules.recall_engine import RecallEngine
-from modules.file_manager import MemoryManager
-from modules.data_handler import DataHandler
-
-
-
-
-
-
-
-
-# apma_app.py
-import os
-import streamlit as st
-# --- Force OpenAI key load before anything else ---
-if "OPENAI_API_KEY" in st.secrets:
-#    s
-
-    os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-else:
-    st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
-
-# ✅ now safe to import the rest
-import sys
-from modules.utils import ensure_data_dirs
-import pandas as pd
-
-# Add this directory to Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), "modules"))
 
 from modules.embeddings_engine import EmbeddingsEngine
 from modules.recall_engine import RecallEngine
 from modules.file_manager import MemoryManager
 from modules.data_handler import DataHandler
-
-
-
-
 
 
 
@@ -65,7 +29,7 @@ from modules.data_handler import DataHandler
 
 
 st.set_page_config(page_title="APMA — AI Project Memory Assistant", layout="wide")
-#st.sidebar.write("🔑 Key prefix:", os.getenv("OPENAI_API_KEY", "")[:10])
+
 
 ensure_data_dirs()
 
@@ -251,6 +215,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
