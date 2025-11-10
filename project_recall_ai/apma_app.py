@@ -7,6 +7,8 @@ try:
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
         #st.sidebar.success("✅ OpenAI key loaded.")
+        print(OPENAI_API_KEY)
+    
     else:
         st.warning("⚠️ OPENAI_API_KEY not found in Streamlit secrets.")
 except Exception as e:
