@@ -220,8 +220,6 @@ else:  # Settings
 
 
 
-st.sidebar.success("✅ OpenAI key loaded.")
-
 
 
 
