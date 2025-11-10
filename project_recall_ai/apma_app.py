@@ -12,7 +12,7 @@ import streamlit as st
 
 # --- Force OpenAI key load before anything else ---
 if "OPENAI_API_KEY" in st.secrets:
-    st.sidebar.text(f"Loaded key: {os.getenv('OPENAI_API_KEY')[:8]}...")  # shows first 8 chars
+#    st.sidebar.text(f"Loaded key: {os.getenv('OPENAI_API_KEY')[:8]}...")  # shows first 8 chars
 
     os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
 else:
@@ -222,6 +222,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
