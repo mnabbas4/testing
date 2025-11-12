@@ -23,7 +23,6 @@ def _get_openai_key():
 
     if key and not os.getenv("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = key
-    print("DEBUG — Inside _get_openai_key(), found:", key)
 
     return key
 
@@ -32,15 +31,14 @@ def _make_client():
     """Creates an OpenAI client safely with fallback handling."""
     key = _get_openai_key()
     if not key:
-        if st:
-            st.warning("⚠️ No OpenAI API key found in Streamlit secrets or environment.")
+        st.warning("⚠️ No OpenAI API key found in Streamlit secrets or environment.")
         return None
+
     try:
         client = OpenAI(api_key=key)
         return client
     except Exception as e:
-        if st:
-            st.error(f"Failed to initialize OpenAI client: {e}")
+        st.error(f"Failed to initialize OpenAI client: {e}")
         return None
 
 
@@ -60,8 +58,7 @@ class EmbeddingsEngine:
 
     def embed_texts(self, texts):
         if not self.client:
-            if st:
-                st.warning("⚠️ Using dummy embeddings (no API key found).")
+            st.warning("⚠️ Using dummy embeddings (no API key found).")
             return [np.random.rand(1536).tolist() for _ in texts]
 
         try:
@@ -71,8 +68,7 @@ class EmbeddingsEngine:
             )
             return [item.embedding for item in response.data]
         except Exception as e:
-            if st:
-                st.error(f"Embedding generation failed: {e}")
+            st.error(f"Embedding generation failed: {e}")
             return [np.random.rand(1536).tolist() for _ in texts]
 
     def index_dataframe(self, memory_path, df, id_prefix="mem"):
@@ -81,4 +77,3 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
-
