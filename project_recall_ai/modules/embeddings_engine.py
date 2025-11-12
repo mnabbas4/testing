@@ -33,10 +33,8 @@ def _make_client():
     if not key:
         st.warning("⚠️ No OpenAI API key found in Streamlit secrets or environment.")
         return None
-
     try:
-        client = OpenAI(api_key=key)
-        return client
+        return OpenAI(api_key=key)
     except Exception as e:
         st.error(f"Failed to initialize OpenAI client: {e}")
         return None
@@ -60,13 +58,12 @@ class EmbeddingsEngine:
         if not self.client:
             st.warning("⚠️ Using dummy embeddings (no API key found).")
             return [np.random.rand(1536).tolist() for _ in texts]
-
         try:
-            response = self.client.embeddings.create(
+            resp = self.client.embeddings.create(
                 model="text-embedding-3-large",
-                input=texts
+                input=texts,
             )
-            return [item.embedding for item in response.data]
+            return [d.embedding for d in resp.data]
         except Exception as e:
             st.error(f"Embedding generation failed: {e}")
             return [np.random.rand(1536).tolist() for _ in texts]
@@ -74,6 +71,6 @@ class EmbeddingsEngine:
     def index_dataframe(self, memory_path, df, id_prefix="mem"):
         texts = [self._text_for_row(r) for _, r in df.iterrows()]
         embeddings = self.embed_texts(texts)
-        out_path = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
-        out_path.write_text(json.dumps(embeddings))
-        return str(out_path)
+        out = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
+        out.write_text(json.dumps(embeddings))
+        return str(out)
