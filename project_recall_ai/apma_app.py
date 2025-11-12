@@ -49,6 +49,14 @@ try:
 except Exception as e:
     emb_engine = None
     emb_msg = str(e)
+from modules.embeddings_engine import EmbeddingsEngine
+
+
+
+if "emb_engine" not in st.session_state:
+    st.session_state.emb_engine = EmbeddingsEngine()
+emb_engine = st.session_state.emb_engine
+
 
 recall_engine = RecallEngine(emb_engine=emb_engine, mem_manager=mem_manager)
 
@@ -217,6 +225,7 @@ else:  # Settings
                     df = mem_manager.load_memory_dataframe(mid)
                     emb_engine.index_dataframe(path, df, id_prefix=mid)
             st.success("Rebuilt embeddings for all memories.")
+
 
 
 
