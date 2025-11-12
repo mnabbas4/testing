@@ -22,13 +22,11 @@ class EmbeddingsEngine:
         if not self.client:
             print("⚠️ Using dummy embeddings (no API key found).")
             return [np.random.rand(1536).tolist() for _ in texts]
-        return [self.client.embeddings.create(
-                    model="text-embedding-3-small",
-                    input=text
-                ).data[0].embedding for text in texts]
-
-    def index_dataframe(self, memory_path, df, id_prefix="mem"):
-        texts = [self._text_for_row(r) for _, r in df.iterrows()]
-        embeddings = self.embed_texts(texts)
-        out_path = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
-        out_path.write_text(json.dumps(embeddings))
+        try:
+            return [self.client.embeddings.create(
+                        model="text-embedding-3-small",
+                        input=text
+                    ).data[0].embedding for text in texts]
+        except Exception as e:
+            print(f"⚠️ Embedding failed: {e}")
+            return [np.random.rand(1536).tolist() for _ in texts]
