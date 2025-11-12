@@ -23,6 +23,7 @@ def _get_openai_key():
 
     if key and not os.getenv("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = key
+    print("DEBUG — Inside _get_openai_key(), found:", key)
 
     return key
 
@@ -80,3 +81,4 @@ class EmbeddingsEngine:
         out_path = Path(memory_path).with_suffix("").parent / f"{id_prefix}_embeddings.json"
         out_path.write_text(json.dumps(embeddings))
         return str(out_path)
+
